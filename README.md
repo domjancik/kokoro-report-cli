@@ -1,6 +1,6 @@
 # kokoro-report-cli
 
-Cross-platform queued speech reporter for Kokoro-FastAPI.
+Cross-platform queued speech reporter for [Kokoro-FastAPI](https://github.com/remsky/Kokoro-FastAPI).
 
 ## Features
 
