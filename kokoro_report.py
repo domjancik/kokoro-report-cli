@@ -614,10 +614,28 @@ def spawn_worker_detached(script_path: Path) -> None:
     args = [sys.executable, str(script_path), "worker", "--once", "--quiet"]
 
     if sys.platform.startswith("win"):
+        ensure_dirs()
+        py_exe = Path(sys.executable)
+        pyw_exe = py_exe.with_name("pythonw.exe")
+        bg_python = str(pyw_exe if pyw_exe.exists() else py_exe)
+        launcher_vbs = ROOT / "run_hidden_worker.vbs"
+        launcher_vbs.write_text(
+            (
+                "Dim shell, pyExe, scriptPath, cmd\n"
+                "If WScript.Arguments.Count < 2 Then WScript.Quit 1\n"
+                "pyExe = WScript.Arguments(0)\n"
+                "scriptPath = WScript.Arguments(1)\n"
+                "Set shell = CreateObject(\"WScript.Shell\")\n"
+                "cmd = Chr(34) & pyExe & Chr(34) & \" \" & Chr(34) & scriptPath & Chr(34) & \" worker --once --quiet\"\n"
+                "shell.Run cmd, 0, False\n"
+            ),
+            encoding="ascii",
+        )
+
         # Use Task Scheduler to fully detach from parent process/job object.
         task_name = "KokoroReportCliWorker"
         start_time = time.strftime("%H:%M", time.localtime(time.time() + 60))
-        task_cmd = f'"{sys.executable}" "{script_path}" worker --once --quiet'
+        task_cmd = f'wscript.exe //B //NoLogo "{launcher_vbs}" "{bg_python}" "{script_path}"'
         try:
             subprocess.run(
                 [
@@ -649,8 +667,9 @@ def spawn_worker_detached(script_path: Path) -> None:
             creationflags = 0
             creationflags |= getattr(subprocess, "DETACHED_PROCESS", 0x00000008)
             creationflags |= getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0x00000200)
+            creationflags |= getattr(subprocess, "CREATE_NO_WINDOW", 0x08000000)
             subprocess.Popen(
-                args,
+                ["wscript.exe", "//B", "//NoLogo", str(launcher_vbs), bg_python, str(script_path)],
                 stdin=subprocess.DEVNULL,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
