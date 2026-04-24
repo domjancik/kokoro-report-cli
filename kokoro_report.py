@@ -614,19 +614,50 @@ def spawn_worker_detached(script_path: Path) -> None:
     args = [sys.executable, str(script_path), "worker", "--once", "--quiet"]
 
     if sys.platform.startswith("win"):
-        creationflags = 0
-        creationflags |= getattr(subprocess, "DETACHED_PROCESS", 0x00000008)
-        creationflags |= getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0x00000200)
-
-        subprocess.Popen(
-            args,
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            close_fds=True,
-            creationflags=creationflags,
-        )
-        return
+        # Use Task Scheduler to fully detach from parent process/job object.
+        task_name = "KokoroReportCliWorker"
+        start_time = time.strftime("%H:%M", time.localtime(time.time() + 60))
+        task_cmd = f'"{sys.executable}" "{script_path}" worker --once --quiet'
+        try:
+            subprocess.run(
+                [
+                    "schtasks",
+                    "/Create",
+                    "/TN",
+                    task_name,
+                    "/SC",
+                    "ONCE",
+                    "/ST",
+                    start_time,
+                    "/TR",
+                    task_cmd,
+                    "/F",
+                ],
+                check=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            subprocess.run(
+                ["schtasks", "/Run", "/TN", task_name],
+                check=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            return
+        except Exception:
+            # Fallback: best-effort detached child process.
+            creationflags = 0
+            creationflags |= getattr(subprocess, "DETACHED_PROCESS", 0x00000008)
+            creationflags |= getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0x00000200)
+            subprocess.Popen(
+                args,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                close_fds=True,
+                creationflags=creationflags,
+            )
+            return
 
     subprocess.Popen(
         args,
