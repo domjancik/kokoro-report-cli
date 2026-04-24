@@ -1,0 +1,19 @@
+{
+  "api_base": "http://127.0.0.1:8880",
+  "voice": "am_echo",
+  "model": "kokoro",
+  "speed": 1.0,
+  "lang_code": "a",
+  "volume_multiplier": 1.0,
+  "timeout": 90,
+  "sample_rate": 24000,
+  "detach": true,
+  "audio": {
+    "preamp_db": 0.0,
+    "bass_db": -3.0,
+    "treble_db": 0.0,
+    "highpass_hz": 0.0,
+    "lowpass_hz": 0.0,
+    "normalize_peak": 0.95
+  }
+}

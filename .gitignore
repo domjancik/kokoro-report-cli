@@ -6,3 +6,5 @@ __pycache__/
 .env
 .DS_Store
 Thumbs.db
+
+kokoro_report.local.json
